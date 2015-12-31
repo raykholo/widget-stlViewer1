@@ -27,14 +27,22 @@ requirejs.config({
         // Example of how to define the key (you make up the key) and the URL
         // Make sure you DO NOT put the .js at the end of the URL
         // SmoothieCharts: '//smoothiecharts.org/smoothie',
+        Three: '//i2dcui.appspot.com/geturl?url=http://threejs.org/build/three.min.js',
+        ThreeTextGeometry: '//i2dcui.appspot.com/js/three/TextGeometry',
+        ThreeFontUtils: '//i2dcui.appspotr.com/js/three/FontUtils',
+        ThreeHelvetiker: '//i2dcui.appspot.com/js/three/threehelvetiker',
+        Clipper: '//i2dcui.appspot.com/js/clipper/clipper_unminified'
     },
     shim: {
         // See require.js docs for how to define dependencies that
         // should be loaded before your script/widget.
+        ThreeTextGeometry: ['Three'],
+       ThreeFontUtils: ['Three', 'ThreeTextGeometry'],
+       ThreeHelvetiker: ['Three', 'ThreeTextGeometry', 'ThreeFontUtils'],
     }
 });
 
-cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
+cprequire_test(["inline:com-chilipeppr-stlViewer"], function(myWidget) {
 
     // Test this element. This code is auto-removed by the chilipeppr.load()
     // when using this widget in production. So use the cpquire_test to do things
@@ -54,7 +62,10 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
             });
         });
     });
-    
+    $('#com-chilipeppr-stlViewer').css('position', 'relative');
+    $('#com-chilipeppr-stlViewer').css('background', 'none');
+    $('#com-chilipeppr-stlViewer').css('width', '300px');
+    $('body').prepend('<div id="3dviewer"></div>');
     
     chilipeppr.load(
         "#testDivForFlashMessageWidget",
@@ -63,7 +74,7 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
             console.log("mycallback got called after loading flash msg module");
             cprequire(["inline:com-chilipeppr-elem-flashmsg"], function(fm) {
                 //console.log("inside require of " + fm.id);
-                fm.init();
+                fm.init(true);
             });
         }
     )
@@ -73,16 +84,29 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
     // init my widget
     myWidget.init();
     $('#com-chilipeppr-widget-template').css('padding', '10px;');
+    
+    $('body').prepend('<div id="com-chilipeppr-flash"></div>');
+    chilipeppr.load("#com-chilipeppr-flash",
+        "http://fiddle.jshell.net/chilipeppr/90698kax/show/light/",
+
+    function () {
+        console.log("mycallback got called after loading flash msg module");
+        cprequire(["inline:com-chilipeppr-elem-flashmsg"], function (fm) {
+            //console.log("inside require of " + fm.id);
+            fm.init();
+        });
+    });
+    
 
 } /*end_test*/ );
 
 // This is the main definition of your widget. Give it a unique name.
-cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other dependencies here */ ], function() {
+cpdefine("inline:com-chilipeppr-stlViewer", ["chilipeppr_ready", /* other dependencies here */ ], function() {
     return {
         /**
          * The ID of the widget. You must define this and make it unique.
          */
-        id: "com-chilipeppr-widget-template", // Make the id the same as the cpdefine id
+        id: "com-chilipeppr-stlViewer", // Make the id the same as the cpdefine id
         name: "Widget / Template", // The descriptive name of your widget.
         desc: "This example widget gives you a framework for creating your own widget. Please change this description once you fork this template and create your own widget. Make sure to run runme.js every time you are done editing your code so you can regenerate your README.md file, regenerate your auto-generated-widget.html, and automatically push your changes to Github.", // A description of what your widget does
         url: "(auto fill by runme.js)",       // The final URL of the working widget as a single HTML file with CSS and Javascript inlined. You can let runme.js auto fill this if you are using Cloud9.
@@ -127,18 +151,30 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
         foreignSubscribe: {
             // Define a key:value pair here as strings to document what signals you subscribe to
             // that are owned by foreign/other widgets.
-            // '/com-chilipeppr-elem-dragdrop/ondropped': 'Example: We subscribe to this signal at a higher priority to intercept the signal. We do not let it propagate by returning false.'
+             '/com-chilipeppr-elem-dragdrop/ondropped': 'Example: We subscribe to this signal at a higher priority to intercept the signal. We do not let it propagate by returning false.'
         },
         /**
          * All widgets should have an init method. It should be run by the
          * instantiating code like a workspace or a different widget.
          */
-        init: function() {
+        init: function(doMyOwnDragDrop) {
             console.log("I am being initted. Thanks.");
 
             this.setupUiFromLocalStorage();
             this.btnSetup();
             this.forkSetup();
+            
+            if (doMyOwnDragDrop) {
+                this.setupDragDrop();
+            } else {
+                // the workspace is doing the drag/drop. this is important
+                // because this code base for this widget is huge and thus
+                // the workspace should handle dragging in BRD files
+                // and once it sees one, it should then load this widget
+                // so that users who don't use ChiliPeppr for BRD files
+                // don't have to load all this insane code
+                
+            }
 
             console.log("I am done being initted.");
         },
@@ -148,6 +184,14 @@ cpdefine("inline:com-chilipeppr-widget-template", ["chilipeppr_ready", /* other 
          * buttons. It also turns on all the bootstrap popovers by scanning
          * the entire DOM of the widget.
          */
+         setupDragDrop: function () {
+            // subscribe to events
+            chilipeppr.subscribe("/com-chilipeppr-elem-dragdrop/ondragover", this, this.onDragOver);
+            chilipeppr.subscribe("/com-chilipeppr-elem-dragdrop/ondragleave", this, this.onDragLeave);
+            // /com-chilipeppr-elem-dragdrop/ondropped
+            chilipeppr.subscribe("/com-chilipeppr-elem-dragdrop/ondropped", this, this.onDropped, 9); // default is 10, we do 9 to be higher priority
+        },
+         
         btnSetup: function() {
 
             // Chevron hide/show body
