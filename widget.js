@@ -44,18 +44,24 @@ cprequire_test(["inline:com-chilipeppr-widget-template"], function(myWidget) {
     console.log("test running of " + myWidget.id);
 
     $('body').prepend('<div id="testDivForFlashMessageWidget"></div>');
-
-    chilipeppr.load(
-        "#testDivForFlashMessageWidget",
-        "http://fiddle.jshell.net/chilipeppr/90698kax/show/light/",
-        function() {
-            console.log("mycallback got called after loading flash msg module");
-            cprequire(["inline:com-chilipeppr-elem-flashmsg"], function(fm) {
-                //console.log("inside require of " + fm.id);
-                fm.init();
-            });
-        }
-    );
+    
+    chilipeppr.load("#3dviewer", "http://fiddle.jshell.net/chilipeppr/y3HRF/195/show/light/", function() {
+        cprequire(['inline:com-chilipeppr-widget-3dviewer'], function(threedviewer) {
+    
+        chilipeppr.load(
+            "#testDivForFlashMessageWidget",
+            "http://fiddle.jshell.net/chilipeppr/90698kax/show/light/",
+            function() {
+                console.log("mycallback got called after loading flash msg module");
+                cprequire(["inline:com-chilipeppr-elem-flashmsg"], function(fm) {
+                    //console.log("inside require of " + fm.id);
+                    fm.init();
+                });
+            }
+        );
+        
+        });
+    });
 
     // init my widget
     myWidget.init();
