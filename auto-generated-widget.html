@@ -222,6 +222,40 @@ cpdefine("inline:com-chilipeppr-stlViewer", ["chilipeppr_ready", /* other depend
             // /com-chilipeppr-elem-dragdrop/ondropped
             chilipeppr.subscribe("/com-chilipeppr-elem-dragdrop/ondropped", this, this.onDropped, 9); // default is 10, we do 9 to be higher priority
         },
+        onDropped: function (data, info) {
+            console.log("onDropped. len of file:", data.length, "info:", info);
+            // we have the data
+            // double check it's a board file, cuz it could be gcode
+            if (data.match(/<!DOCTYPE eagle SYSTEM "eagle.dtd">/i)) {
+
+                // check that there's a board tag
+                if (data.match(/<board>/i)) {
+                    console.log("we have an eagle board file!");
+
+                    localStorage.setItem('com-chilipeppr-widget-eagle-lastDropped', data);
+                    localStorage.setItem('com-chilipeppr-widget-eagle-lastDropped-info', JSON.stringify(info));
+                    this.fileInfo = info;
+                    console.log("saved brd file to localstorage");
+                    this.open(data, info);
+                } else {
+                    console.log("looks like it is an eagle generated file, but not a board file. sad.");
+                    chilipeppr.publish('/com-chilipeppr-elem-flashmsg/flashmsg', "Looks like you dragged in an Eagle CAD file, but it contains no board tag. You may have dragged in a schematic instead. Please retry with a valid board file.");
+                }
+
+                // now, we need to return false so no other widgets see this
+                // drag/drop event because they won't know how to handle
+                // an Eagle Brd file
+                return false;
+            } else {
+                if (info.name.match(/.brd$/i)) {
+                    // this looks like an Eagle brd file, but it's binary
+                    chilipeppr.publish('/com-chilipeppr-elem-flashmsg/flashmsg', "Error Loading Eagle BRD File", "Looks like you dragged in an Eagle BRD file, but it seems to be in binary. You can open this file in Eagle and then re-save it to a new file to create a text version of your Eagle BRD file.", 15 * 1000);
+                    return false;
+                } else {
+                    console.log("we do not have an eagle board file. sad.");
+                }
+            }
+        },
          
         btnSetup: function() {
 
